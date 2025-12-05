@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile
+from .models import AvailableSlot, UserProfile
 
 class RegisterSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required = True)
@@ -26,3 +26,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         UserProfile.objects.create(user=user,phone=phone,age=age,gender=gender,role=role)
         return user
+    
+class SlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AvailableSlot
+        fields = '__all__'
