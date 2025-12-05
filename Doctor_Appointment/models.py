@@ -5,7 +5,6 @@ class UserProfile(models.Model):
     ROLL_CHOICES = (
         ('patient','Patient'),
         ('doctor','Doctor'),
-        ('admin','Admin')
     )
     user = models.OneToOneField(User,on_delete = models.CASCADE)
     phone = models.CharField(max_length=20,null=False,blank=False)
@@ -15,3 +14,11 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} {self.role}"
+    
+class AvailableSlot(models.Model):
+    user = models.ForeignKey(User,on_delete = models.CASCADE)
+    date = models.DateField()
+    Time = models.TimeField()
+
+    def __str__(self):
+        return f"{self.date}"
