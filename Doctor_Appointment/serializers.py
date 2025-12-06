@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import AvailableSlot, UserProfile
+from .models import AvailableSlot, MedicalNotes, Prescription, UserProfile
 
 class RegisterSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required = True)
@@ -27,7 +27,29 @@ class RegisterSerializer(serializers.ModelSerializer):
         UserProfile.objects.create(user=user,phone=phone,age=age,gender=gender,role=role)
         return user
     
+# ======================================= DOCTOR==============================================
+
+
 class SlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailableSlot
         fields = '__all__'
+
+class MedicalNoteserializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalNotes
+        fields = '__all__'
+
+    def create(self, validated_data):
+        validated_data['doctor'] = self.context['request'].user
+        return super().create(validated_data)
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prescription
+        fields='__all__'
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['doctor'] = user
+        return super().create(validated_data)
