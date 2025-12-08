@@ -50,7 +50,7 @@ class Prescription(models.Model):
 class Doctor_Details(models.Model):
     doctor = models.OneToOneField(UserProfile,on_delete=models.CASCADE)
     specialization = models.CharField(max_length=100)
-    experiance = models.IntegerField()
+    experience = models.IntegerField()
     qualification = models.CharField()
 
     def __str__(self):

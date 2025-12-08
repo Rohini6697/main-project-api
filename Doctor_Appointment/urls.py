@@ -18,11 +18,13 @@ urlpatterns = [
     path('medical_note_list/',views.medical_note_list),
     path('medical_note_delete/<int:id>/',views.medical_note_delete),
     path('medical_note_update/<int:id>/',views.medical_note_update),
+    path('prescription_upload/',views.prescription_upload),
 
 # ======================================= PATIENT ==============================================
 
 
 # ======================================= ADMIN ==============================================
-
+    path('add_doctor/',views.add_doctor),
+    path('doctors_list/',views.doctors_list)
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
