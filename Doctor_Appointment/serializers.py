@@ -55,68 +55,20 @@ class PrescriptionSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 class AddDoctorSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='doctor.user.username')
+    email = serializers.CharField(source='doctor.user.email')
 
-    # Extra doctor-specific fields
-    specialization = serializers.CharField()
-    experience = serializers.IntegerField()
-    qualification = serializers.CharField()
-
-    # Profile fields
-    phone = serializers.CharField()
-    age = serializers.IntegerField()
-    gender = serializers.CharField()
+    phone = serializers.CharField(source='doctor.phone')
+    age = serializers.IntegerField(source='doctor.age')
+    gender = serializers.CharField(source='doctor.gender')
+    role = serializers.CharField(source='doctor.role')
 
     class Meta:
-        model = User
+        model = Doctor_Details
         fields = [
-            'username', 'email', 'password',
-            'specialization', 'experience', 'qualification',
-            'phone', 'age', 'gender'
+            "id",
+            "username", "email",
+            "phone", "age", "gender", "role",
+            "specialization", "experience", "qualification",
         ]
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
-
-    def create(self, validated_data):
-        # Extract add-on fields
-        specialization = validated_data.pop('specialization')
-        experience = validated_data.pop('experience')
-        qualification = validated_data.pop('qualification')
-
-        phone = validated_data.pop('phone')
-        age = validated_data.pop('age')
-        gender = validated_data.pop('gender')
-
-        # Create USER
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            password=validated_data['password'],
-            email=validated_data.get('email', '')
-        )
-
-        # Create PROFILE with doctor role
-        profile = UserProfile.objects.create(
-            user=user,
-            phone=phone,
-            age=age,
-            gender=gender,
-            role="doctor"
-        )
-
-        # Create DOCTOR DETAILS
-        Doctor_Details.objects.create(
-            doctor=profile,
-            specialization=specialization,
-            experience=experience,
-            qualification=qualification
-        )
-
-        return user
-
-    # Prevent serializer from trying to read doctor fields from User
-    def to_representation(self, instance):
-        return {
-            "message": "Doctor added successfully",
-            "username": instance.username,
-            "email": instance.email
-        }
+    

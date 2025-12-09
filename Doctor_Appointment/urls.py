@@ -22,9 +22,14 @@ urlpatterns = [
 
 # ======================================= PATIENT ==============================================
 
+    path('patient/list_dept_doctor',views.list_dept_doctor),
+    path('patient/patient_slot_list/',views.patient_slot_list),
+    path('patient/list_dept_doctor/',views.list_dept_doctor),
 
 # ======================================= ADMIN ==============================================
     path('add_doctor/',views.add_doctor),
-    path('doctors_list/',views.doctors_list)
+    path('doctors_list/',views.doctors_list),
+    path('doctor_delete/<int:id>/',views.doctor_delete),
+    path('doctor_update/<int:id>/',views.doctor_update)
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

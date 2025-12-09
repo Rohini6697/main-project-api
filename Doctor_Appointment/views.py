@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.decorators import api_view,permission_classes
+from django.contrib.auth.models import User
 
 
 @api_view(['POST'])
@@ -207,14 +208,41 @@ def prescription_upload(request):
     return Response(serializer.errors,status=400)
 
 # ======================================= ADMIN ==============================================
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def add_doctor(request):
-    serializer = AddDoctorSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=201)
-    return Response(serializer.errors, status=400)
+
+    # step 1: create USER
+    username = request.data.get('username')
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "Username already exists!"}, status=400)
+
+    user = User.objects.create_user(
+        username=username,
+        password=request.data.get('password'),
+        email=request.data.get('email')
+    )
+
+    # step 2: create USER PROFILE (doctor role)
+    profile = UserProfile.objects.create(
+        user=user,
+        phone=request.data.get('phone'),
+        age=request.data.get('age'),
+        gender=request.data.get('gender'),
+        role="doctor"
+    )
+
+    # step 3: create DOCTOR DETAILS
+    Doctor_Details.objects.create(
+        doctor=profile,
+        specialization=request.data.get('specialization'),
+        experience=request.data.get('experience'),
+        qualification=request.data.get('qualification')
+    )
+
+    return Response({"message": "Doctor added successfully"})
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
@@ -224,7 +252,7 @@ def doctor_delete(request,id):
         doctor.delete()
         return Response({'message':'deleted doctor successfully'})
     except doctor.DoesNotExist:
-        return Response({'message':'Data does not exist'})
+        return Response({'message':'Data does not exist'},status=404)
     
 
 @api_view(['GET'])
@@ -233,3 +261,61 @@ def doctors_list(request):
     doctor = Doctor_Details.objects.all()
     serializer = AddDoctorSerializer(doctor,many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def doctor_update(request, id):
+    doctor_details = Doctor_Details.objects.get(id=id)
+    profile = doctor_details.doctor      # UserProfile model
+    user = profile.user                  # User model
+
+    data = request.data
+
+    # --------------------
+    # UPDATE User FIELDS
+    # --------------------
+    user.username = data.get("username", user.username)
+    user.email = data.get("email", user.email)
+    user.save()
+
+    # --------------------
+    # UPDATE UserProfile FIELDS
+    # --------------------
+    profile.phone = data.get("phone", profile.phone)
+    profile.age = data.get("age", profile.age)
+    profile.gender = data.get("gender", profile.gender)
+    profile.role = data.get("role", profile.role)
+    profile.save()
+
+    # --------------------
+    # UPDATE Doctor_Details FIELDS
+    # --------------------
+    doctor_details.specialization = data.get("specialization", doctor_details.specialization)
+    doctor_details.experience = data.get("experience", doctor_details.experience)
+    doctor_details.qualification = data.get("qualification", doctor_details.qualification)
+    doctor_details.save()
+
+    # Serializer only for output
+    serializer = AddDoctorSerializer(doctor_details)
+    return Response(serializer.data)
+
+# ======================================= PATIENT ==============================================
+
+@api_view(['GET'])
+def patient_slot_list(request):
+    slots = AvailableSlot.objects.all()
+    serializer = SlotSerializer(slots,many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def list_dept_doctor(request):
+    doctors = Doctor_Details.objects.all()
+
+    data = []
+    for d in doctors:
+        data.append({
+            "username": d.doctor.user.username,
+            "specialization": d.specialization
+        })
+
+    return Response(data)
