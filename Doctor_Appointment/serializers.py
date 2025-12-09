@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import AvailableSlot, Doctor_Details, MedicalNotes, Prescription, UserProfile
+from .models import Appointment, AvailableSlot, Doctor_Details, MedicalNotes, Prescription, UserProfile
 
 class RegisterSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required = True)
@@ -72,3 +72,7 @@ class AddDoctorSerializer(serializers.ModelSerializer):
             "specialization", "experience", "qualification",
         ]
     
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        feilds = '__all__'

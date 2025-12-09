@@ -25,6 +25,8 @@ urlpatterns = [
     path('patient/list_dept_doctor',views.list_dept_doctor),
     path('patient/patient_slot_list/',views.patient_slot_list),
     path('patient/list_dept_doctor/',views.list_dept_doctor),
+    path("book_appointment/", views.book_appointment),
+
 
 # ======================================= ADMIN ==============================================
     path('add_doctor/',views.add_doctor),

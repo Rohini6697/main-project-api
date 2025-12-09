@@ -319,3 +319,69 @@ def list_dept_doctor(request):
         })
 
     return Response(data)
+
+import razorpay
+from django.conf import settings
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Appointment
+from rest_framework import status
+import razorpay
+import qrcode
+import os
+from django.conf import settings
+
+
+client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+import razorpay
+import qrcode
+import base64
+from io import BytesIO
+
+@api_view(['POST'])
+def book_appointment(request):
+    user_id = request.data.get("user")
+    doctor_id = request.data.get("doctor")
+    amount = request.data.get("amount")
+
+    if not user_id or not doctor_id or not amount:
+        return Response({"error": "user, doctor, amount required"}, status=400)
+
+    user = User.objects.get(id=user_id)
+    doctor = Doctor_Details.objects.get(id=doctor_id)
+
+    appointment = Appointment.objects.create(
+        user=user,
+        doctor=doctor,
+    )
+
+    # Razorpay order
+    order = client.order.create({
+        "amount": int(amount) * 100,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    order_id = order["id"]
+
+    # Razorpay payment link
+    link = client.payment_link.create({
+        "amount": int(amount) * 100,
+        "currency": "INR",
+        "reference_id": order_id,
+        "description": f"Payment for appointment",
+        "callback_url": "https://your-backend.com/payment/verify/",
+        "callback_method": "get"
+    })
+
+    payment_url = link["short_url"]
+
+    return Response({
+        "appointment_id": appointment.id,
+        "payment_url": payment_url,
+        "order_id": order_id
+    })
