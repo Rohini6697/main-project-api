@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from .models import AvailableSlot, Doctor_Details, MedicalNotes, UserProfile
-from .serializers import AddDoctorSerializer, MedicalNoteserializer, PrescriptionSerializer, RegisterSerializer, SlotSerializer
+from .serializers import AddDoctorSerializer, AppointmentSerializer, MedicalNoteserializer, PrescriptionSerializer, RegisterSerializer, SlotSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status
@@ -207,6 +207,19 @@ def prescription_upload(request):
         return Response(serializer.data)
     return Response(serializer.errors,status=400)
 
+@api_view(['GET'])
+def doctor_appointment_list(request):
+    try:
+        profile = UserProfile.objects.get(user = request.user)
+    except UserProfile.DoesNotExist:
+        return Response({'message':'Profile not found'},status=404)
+    if profile.role != 'doctor':
+        return Response({'message':'You cant access this'})
+    appointment = Appointment.objects.all()
+    serializer = AppointmentSerializer(appointment,many=True)
+    return Response(serializer.data)
+
+
 # ======================================= ADMIN ==============================================
 
 @api_view(['POST'])
@@ -299,6 +312,13 @@ def doctor_update(request, id):
     serializer = AddDoctorSerializer(doctor_details)
     return Response(serializer.data)
 
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_appointment_list(request):
+    appointment = Appointment.objects.all()
+    serializer = AppointmentSerializer(appointment,many=True)
+    return Response(serializer.data)
+
 # ======================================= PATIENT ==============================================
 
 @api_view(['GET'])
@@ -354,12 +374,14 @@ def book_appointment(request):
     user = User.objects.get(id=user_id)
     doctor = Doctor_Details.objects.get(id=doctor_id)
 
+    # Create appointment (pending initially)
     appointment = Appointment.objects.create(
         user=user,
         doctor=doctor,
+        payment_status="pending"
     )
 
-    # Razorpay order
+    # Create Razorpay order
     order = client.order.create({
         "amount": int(amount) * 100,
         "currency": "INR",
@@ -368,20 +390,79 @@ def book_appointment(request):
 
     order_id = order["id"]
 
-    # Razorpay payment link
+    # SAVE order_id inside appointment so webhook can update it
+    appointment.payment_id = order_id
+    appointment.save()
+
+    # Create Razorpay payment link
     link = client.payment_link.create({
         "amount": int(amount) * 100,
         "currency": "INR",
         "reference_id": order_id,
         "description": f"Payment for appointment",
-        "callback_url": "https://your-backend.com/payment/verify/",
+        "callback_url": "http://127.0.0.1:8000/payment/verify/",
         "callback_method": "get"
     })
 
     payment_url = link["short_url"]
 
     return Response({
+        "message": "Appointment created. Complete payment using the link.",
         "appointment_id": appointment.id,
         "payment_url": payment_url,
         "order_id": order_id
+    })
+
+
+@api_view(['GET'])
+def payment_verify(request):
+
+    payment_id = request.GET.get("razorpay_payment_id")
+    order_id = request.GET.get("razorpay_payment_link_reference_id")
+
+    if not payment_id or not order_id:
+        return Response({"error": "Missing payment fields"}, status=400)
+
+    try:
+        appointment = Appointment.objects.get(payment_id=order_id)
+    except Appointment.DoesNotExist:
+        return Response({"error": "Appointment not found"}, status=404)
+
+    appointment.payment_status = "paid"
+    appointment.payment_id = payment_id
+    appointment.save()
+
+    return Response({
+        "message": "Payment successful!",
+        "appointment_id": appointment.id,
+        "status": appointment.payment_status
+    })
+
+
+
+@api_view(['GET'])
+def appointment_list(request):
+    appointment = Appointment.objects.all()
+    serializer = AppointmentSerializer(appointment,many=True)
+    return Response(serializer.data)
+
+@api_view(['PATCH'])
+def doctor_update_status(request, appointment_id):
+    try:
+        appointment = Appointment.objects.get(id=appointment_id)
+    except Appointment.DoesNotExist:
+        return Response({"error": "Appointment not found"}, status=404)
+
+    new_status = request.data.get("payment_status")
+
+    if new_status not in ["pending", "paid", "completed"]:
+        return Response({"error": "Invalid status"}, status=400)
+
+    appointment.payment_status = new_status
+    appointment.save()
+
+    return Response({
+        "message": "Status updated",
+        "appointment_id": appointment.id,
+        "new_status": appointment.payment_status
     })

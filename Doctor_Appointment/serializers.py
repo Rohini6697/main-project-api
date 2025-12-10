@@ -75,4 +75,4 @@ class AddDoctorSerializer(serializers.ModelSerializer):
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
-        feilds = '__all__'
+        fields = '__all__'

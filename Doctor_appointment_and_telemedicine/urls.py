@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from Doctor_Appointment import views 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',include('Doctor_Appointment.urls')),
     path('api-auth/', include('rest_framework.urls')),
-
+    path("payment/verify/", views.payment_verify, name="payment_verify"),
 ]
